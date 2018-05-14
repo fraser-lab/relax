@@ -33,5 +33,6 @@ print(parameters)
 
 Requirements:
 -----
+* Python >= 3.6
 * Numpy
 * Scipy
