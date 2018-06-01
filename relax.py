@@ -56,7 +56,7 @@ def three_step_relaxation(x,a,b,c,d,e,f,g):
     return a*(1-np.exp(-b*x))+c*(1-np.exp(-d*x))+e*(1-np.exp(-f*x))+g
 
 
-def relaxation_fit(x, y, relaxation_function=single_step_relaxation, initial_guess=(1, 1, 1), maxfev=5000):
+def relaxation_fit(x, y, relaxation_function=single_step_relaxation, initial_guess=(1, 1, 1), maxfev=5000, sigma=None):
     """
     Function to fit relaxation to observed signals y over times x
 
@@ -77,7 +77,7 @@ def relaxation_fit(x, y, relaxation_function=single_step_relaxation, initial_gue
 
     # Signature.parameters gets the number of arguments in a function - that is 1 + the number of parameters.
     assert len(initial_guess) == len(signature(relaxation_function).parameters)-1
-    parameters, covariance = curve_fit(relaxation_function, x, y, p0=initial_guess, maxfev=maxfev)
+    parameters, covariance = curve_fit(relaxation_function, x, y, p0=initial_guess, maxfev=maxfev, method='lm', sigma=sigma)
     for index, value in enumerate(parameters):
         standard_dev = np.sqrt(covariance[index,index])
         if np.abs(value) < np.abs(standard_dev):
