@@ -1,7 +1,7 @@
-from inspect import signature
-from warnings import warn
+#from inspect import signature
+#from warnings import warn
 
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, leastsq, least_squares
 import numpy as np
 
 
@@ -21,6 +21,9 @@ def single_step_relaxation(x,a,b,c):
     # C is the offset
     return a*(1-np.exp(-b*x))+c
 
+def expand_relax_single(x, p):
+    return single_step_relaxation(np.asarray(x), *p)
+
 
 def two_step_relaxation(x,a,b,c,d,e):
     """
@@ -36,6 +39,10 @@ def two_step_relaxation(x,a,b,c,d,e):
     :return: Calculated signal at time x given relaxation parameters a, b, c, d, e
     """
     return a*(1-np.exp(-b*x))+c*(1-np.exp(-d*x))+e
+
+
+def expand_relax_two(x, p):
+    return two_step_relaxation(np.asarray(x),*p)
 
 
 def three_step_relaxation(x,a,b,c,d,e,f,g):
@@ -76,12 +83,81 @@ def relaxation_fit(x, y, relaxation_function=single_step_relaxation, initial_gue
     """
 
     # Signature.parameters gets the number of arguments in a function - that is 1 + the number of parameters.
-    assert len(initial_guess) == len(signature(relaxation_function).parameters)-1
+    #assert len(initial_guess) == len(signature(relaxation_function).parameters)-1
     parameters, covariance = curve_fit(relaxation_function, x, y, p0=initial_guess, maxfev=maxfev, method='lm', sigma=sigma, absolute_sigma = absolute_sigma)
     for index, value in enumerate(parameters):
         standard_dev = np.sqrt(covariance[index,index])
         if np.abs(value) < np.abs(standard_dev):
             parameter_letter = "abcdefghijklmnopqrstuvwxyz"[index]
-            warn(f"Parameter {parameter_letter} has standard deviation ({standard_dev}) larger than its value({value})")
+    #       warn(f"Parameter {parameter_letter} has standard deviation ({standard_dev}) larger than its value({value})")
     y_calc = [relaxation_function(i,*parameters) for i in x]
     return parameters, covariance, y_calc
+
+
+def fit_bootstrap_two(data_y,data_x,relaxation_function=two_step_relaxation, initial_guess=(1,1,1), maxfev=5000, sigma=None, absolute_sigma=True):
+    errfunc = lambda p,x,y: y-expand_relax_two(x,p)
+    p_fit, p_err = leastsq(errfunc, x0=initial_guess, args=(data_x,data_y), full_output=0, maxfev=30000)
+    residuals = errfunc(p_fit, data_x, data_y)
+    sigma_res = np.std(residuals)
+    sigma_err_total = sigma_res
+    print
+    ps = []
+    for i in range(10000):
+        random_delta = np.random.normal(0., sigma_err_total, len(data_y))
+        rand_data_y = data_y + random_delta
+        # if i < 5:
+        #     print (rand_data_y)
+        result = least_squares(errfunc, x0=p_fit, bounds=((-10, 10**-8, -10, 10**-8, -np.inf),(10,1,10,1,np.inf)), args=(data_x,rand_data_y), method='dogbox',   max_nfev=200)
+        rand_fit=result['x']
+        ps.append(rand_fit)
+
+
+    ps = np.array(ps)
+    mean_pfit = np.median(ps, 0)
+    # print (mean_pfit)
+
+    NSigma = 1
+    err_pfit = NSigma * np.std(ps,0)
+
+    y_calc =  expand_relax_two(data_x, mean_pfit)
+
+
+    return mean_pfit, err_pfit, y_calc
+
+
+def fit_bootstrap_single(data_y,data_x,relaxation_function=single_step_relaxation, initial_guess=(1,1,1), maxfev=5000, sigma=None, absolute_sigma=True):
+    errfunc = lambda p,x,y: y-expand_relax_single(x,p)
+    p_fit, p_err = leastsq(errfunc, x0=initial_guess, args=(data_x,data_y), full_output=0, maxfev=30000)
+    residuals = errfunc(p_fit, data_x, data_y)
+    sigma_res = np.std(residuals)
+    sigma_err_total = sigma_res
+    print
+    ps = []
+    for i in range(10000):
+        random_delta = np.random.normal(0., sigma_err_total, len(data_y))
+        rand_data_y = data_y + random_delta
+        # if i < 5:
+        #     print (rand_data_y)
+        result = least_squares(errfunc, x0=p_fit, args=(data_x,rand_data_y), method='dogbox',   max_nfev=200)
+        rand_fit=result['x']
+        ps.append(rand_fit)
+
+
+    ps = np.array(ps)
+    mean_pfit = np.median(ps, 0)
+    # print (mean_pfit)
+
+    NSigma = 1
+    err_pfit = NSigma * np.std(ps,0)
+
+    y_calc =  expand_relax_single(data_x, mean_pfit)
+
+
+    return mean_pfit, err_pfit, y_calc
+
+
+
+
+
+
+    
