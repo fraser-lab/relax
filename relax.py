@@ -2,6 +2,7 @@
 #from warnings import warn
 
 from scipy.optimize import curve_fit, leastsq, least_squares
+
 import numpy as np
 
 
@@ -140,12 +141,14 @@ def fit_bootstrap_single(data_y,data_x,relaxation_function=single_step_relaxatio
         #     print (rand_data_y)
         result = least_squares(errfunc, x0=p_fit, args=(data_x,rand_data_y), method='dogbox',   max_nfev=200)
         rand_fit=result['x']
+
         ps.append(rand_fit)
 
 
     ps = np.array(ps)
     mean_pfit = np.median(ps, 0)
     # print (mean_pfit)
+
 
     NSigma = 1
     err_pfit = NSigma * np.std(ps,0)
