@@ -5,7 +5,21 @@ from scipy.optimize import curve_fit, leastsq, least_squares
 
 import numpy as np
 
+def linear(x,a,b):
+    return a*x + b
 
+def michaelis_menten(x,a,b):
+    """
+    Michaelis Menten  function based on 2 parameters a, b
+
+    :param float x: Substrate Concentration (unit agnostic)
+    :param float a: Vmax
+    :param float b: Km
+    :param float c: Hill Coefficient
+
+    :return: Calculated signal at time x given relaxation parameters a, b, c
+    """
+    return a*x/(x+b)
 
 def single_step_relaxation(x,a,b,c):
     """
@@ -46,6 +60,9 @@ def expand_relax_two(x, p):
     return two_step_relaxation(np.asarray(x),*p)
 
 
+def second_step_linear(x, a, b, c, d):
+    return a*(1-np.exp(-b*x))+ c*x + d
+
 def three_step_relaxation(x,a,b,c,d,e,f,g):
     """
      Three-step relaxation function based on 7 parameters a, b, c, d, e, f, g
@@ -64,7 +81,7 @@ def three_step_relaxation(x,a,b,c,d,e,f,g):
     return a*(1-np.exp(-b*x))+c*(1-np.exp(-d*x))+e*(1-np.exp(-f*x))+g
 
 
-def relaxation_fit(x, y, relaxation_function=single_step_relaxation, initial_guess=(1, 1, 1), maxfev=5000, sigma=None, absolute_sigma=True):
+def relaxation_fit(x, y, relaxation_function=single_step_relaxation, initial_guess=(1, 1, 1), maxfev=5000, sigma=None, absolute_sigma=False):
     """
     Function to fit relaxation to observed signals y over times x
 
